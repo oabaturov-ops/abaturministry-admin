@@ -1,48 +1,62 @@
-import { NextResponse } from 'next/server'
-import { readArticles, writeArticles } from '../../../../lib/articles-store'
+import { NextResponse } from "next/server";
+import {
+  getArticleById,
+  updateArticle,
+  deleteArticle,
+} from "../../../../lib/articles-store";
 
-// PUT: Обновить материал
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+// ============================================================
+// /api/articles/[id]
+// GET    — одна статья (по uuid)
+// PUT    — обновление статьи (панель, кнопка «Сохранить»)
+// DELETE — удаление статьи
+//
+// ⚠️ Файл лежит ВНУТРИ папки [id] — на уровень глубже, чем
+// /api/articles/route.ts, поэтому здесь ЧЕТЫРЕ ../ :
+//   [id] → articles → api → app → src
+// ============================================================
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+// GET /api/articles/[id] — получить одну статью
+export async function GET(_request: Request, context: RouteContext) {
   try {
-    const { id } = await params // Добавлен await для Next.js 16
-    const body = await request.json()
-    const articles = readArticles()
-    
-    const index = articles.findIndex((a) => a.id === id)
-    if (index === -1) return NextResponse.json({ error: 'Не найден' }, { status: 404 })
-
-    articles[index] = {
-      ...articles[index],
-      slug: body.slug || articles[index].slug,
-      author: body.author || articles[index].author,
-      coverImage: body.coverImage || articles[index].coverImage,
-      published: Object.prototype.hasOwnProperty.call(body, 'published') ? body.published : articles[index].published,
-      sortOrder: Number(body.sortOrder) ?? articles[index].sortOrder,
-      title_ru: body.title_ru || '',
-      content_ru: body.content_ru || '',
-      excerpt_ru: body.excerpt_ru || '',
-      title_en: body.title_en || '',
-      content_en: body.content_en || '',
-      excerpt_en: body.excerpt_en || '',
+    const { id } = await context.params;
+    const article = await getArticleById(id);
+    if (!article) {
+      return NextResponse.json({ error: "Статья не найдена" }, { status: 404 });
     }
-
-    writeArticles(articles)
-    return NextResponse.json({ success: true })
-  } catch { return NextResponse.json({ error: 'Ошибка' }, { status: 500 }) }
+    return NextResponse.json(article);
+  } catch (error) {
+    console.error("GET /api/articles/[id]:", error);
+    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
+  }
 }
 
-// DELETE: Удалить материал
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+// PUT /api/articles/[id] — обновить статью
+export async function PUT(request: Request, context: RouteContext) {
   try {
-    const { id } = await params // Добавлен await для Next.js 16
-    const articles = readArticles()
-    const filtered = articles.filter((a) => a.id !== id)
-    
-    if (articles.length === filtered.length) {
-      return NextResponse.json({ error: 'Не найден' }, { status: 404 })
+    const { id } = await context.params;
+    const body = await request.json();
+    const updated = await updateArticle(id, body);
+    if (!updated) {
+      return NextResponse.json({ error: "Статья не найдена" }, { status: 404 });
     }
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("PUT /api/articles/[id]:", error);
+    return NextResponse.json({ error: "Ошибка сохранения" }, { status: 500 });
+  }
+}
 
-    writeArticles(filtered)
-    return NextResponse.json({ success: true })
-  } catch { return NextResponse.json({ error: 'Ошибка' }, { status: 500 }) }
+// DELETE /api/articles/[id] — удалить статью
+export async function DELETE(_request: Request, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    await deleteArticle(id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("DELETE /api/articles/[id]:", error);
+    return NextResponse.json({ error: "Ошибка удаления" }, { status: 500 });
+  }
 }

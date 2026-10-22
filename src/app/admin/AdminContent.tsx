@@ -2,9 +2,10 @@
 import { useState, useEffect, useCallback } from 'react'
 
 interface Article {
-  id: string; slug: string; author: string; coverImage: string; published: boolean; sortOrder: number;
+  id: string; slug: string; author: string; coverImage: string; published: boolean; sortOrder: number; createdAt: string;
   title_ru: string; content_ru: string; excerpt_ru: string;
   title_en: string; content_en: string; excerpt_en: string;
+  category_ru: string; category_en: string; read_time: string;
 }
 
 export default function AdminContent() {
@@ -17,7 +18,7 @@ export default function AdminContent() {
   const [editItem, setEditItem] = useState<Article | null>(null)
   const [delId, setDelId] = useState<string | null>(null)
   const [tab, setTab] = useState<'gen' | 'ru' | 'en'>('gen')
-  const [form, setForm] = useState({ slug: '', author: '', coverImage: '', published: false, sortOrder: '0', title_ru: '', content_ru: '', excerpt_ru: '', title_en: '', content_en: '', excerpt_en: '' })
+  const [form, setForm] = useState({ slug: '', author: '', coverImage: '', published: false, sortOrder: '0', title_ru: '', content_ru: '', excerpt_ru: '', title_en: '', content_en: '', excerpt_en: '', category_ru: '', category_en: '', read_time: '' })
 
   const loadData = useCallback(async () => {
     try { const r = await fetch('/api/articles'); if (r.ok) setItems(await r.json()) } catch (e) { console.error(e) } finally { setLoading(false) }
@@ -33,7 +34,7 @@ export default function AdminContent() {
 
   const openM = (item?: Article) => {
     setTab('gen')
-    setForm(item ? { slug: item.slug, author: item.author, coverImage: item.coverImage, published: item.published, sortOrder: String(item.sortOrder), title_ru: item.title_ru||'', content_ru: item.content_ru||'', excerpt_ru: item.excerpt_ru||'', title_en: item.title_en||'', content_en: item.content_en||'', excerpt_en: item.excerpt_en||'' } : { slug: '', author: '', coverImage: '', published: false, sortOrder: '0', title_ru: '', content_ru: '', excerpt_ru: '', title_en: '', content_en: '', excerpt_en: '' })
+    setForm(item ? { slug: item.slug, author: item.author, coverImage: item.coverImage, published: item.published, sortOrder: String(item.sortOrder), title_ru: item.title_ru||'', content_ru: item.content_ru||'', excerpt_ru: item.excerpt_ru||'', title_en: item.title_en||'', content_en: item.content_en||'', excerpt_en: item.excerpt_en||'', category_ru: item.category_ru||'', category_en: item.category_en||'', read_time: item.read_time||'' } : { slug: '', author: '', coverImage: '', published: false, sortOrder: '0', title_ru: '', content_ru: '', excerpt_ru: '', title_en: '', content_en: '', excerpt_en: '', category_ru: '', category_en: '', read_time: '' })
     setEditItem(item || null)
     setModal(true)
   }
@@ -51,11 +52,16 @@ export default function AdminContent() {
   }
 
   // Маленькие под-компоненты полей, чтобы разгрузить основной рендер
-      const renderGen = () => (
+  const renderGen = () => (
     <div className="space-y-3">
       <div><label className="text-xs text-gray-400">Slug (URL латиницей)</label><input type="text" value={form.slug} onChange={e => setForm({...form, slug: e.target.value})} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-3 py-1.5 mt-1 text-white focus:outline-none" /></div>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div><label className="text-xs text-gray-400">Сортировка</label><input type="number" value={form.sortOrder} onChange={e => setForm({...form, sortOrder: e.target.value})} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-3 py-1.5 mt-1" /></div>
+        <div><label className="text-xs text-gray-400">Время чтения</label><input type="text" placeholder="5 мин" value={form.read_time} onChange={e => setForm({...form, read_time: e.target.value})} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-3 py-1.5 mt-1" /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className="text-xs text-gray-400">Категория (RU)</label><input type="text" value={form.category_ru} onChange={e => setForm({...form, category_ru: e.target.value})} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-3 py-1.5 mt-1" /></div>
+        <div><label className="text-xs text-gray-400">Category (EN)</label><input type="text" value={form.category_en} onChange={e => setForm({...form, category_en: e.target.value})} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-3 py-1.5 mt-1" /></div>
       </div>
       <div><label className="text-xs text-gray-400">Ссылка на обложку</label><input type="text" value={form.coverImage} onChange={e => setForm({...form, coverImage: e.target.value})} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-3 py-1.5 mt-1" /></div>
       <div className="flex items-center gap-2 pt-1"><input type="checkbox" id="pub" checked={form.published} onChange={e => setForm({...form, published: e.target.checked})} /><label htmlFor="pub" className="text-xs text-gray-300">Опубликовать сразу</label></div>
@@ -107,6 +113,10 @@ export default function AdminContent() {
                 <div>
                   <div className="font-bold text-gray-200">🇷🇺 {item.title_ru || 'Без названия'}</div>
                   <div className="text-sm text-gray-400">🇺🇸 {item.title_en || 'No title'}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {item.category_ru && <span>📁 {item.category_ru}</span>}
+                    <span className="ml-2">{item.published ? '🟢 Опубликовано' : '⚪️ Черновик'}</span>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => openM(item)} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-md text-xs">Редактировать</button>
@@ -158,4 +168,3 @@ export default function AdminContent() {
     </div>
   )
 }
-
